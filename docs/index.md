@@ -2,53 +2,51 @@
 
 *The setup repo that makes the sample reproducible*
 
-Microservices demos are fun… right up until you try to recreate them.
+Microservices demos are fun until you try to recreate them.
 
-Suddenly you’re not “running the sample” anymore — you’re stitching together Kubernetes, networking, databases, secrets, ingress, DNS, and just enough security to not feel like a toy. And then you hit the classic trap: Terraform finishes successfully… and the app still isn’t reachable.
+At that point you are not really “running the sample.” You are setting up Kubernetes, networking, databases, secrets, ingress, DNS, and enough security to make it feel real. Then you hit the classic problem: Terraform completes, and the app still does not load.
 
-That’s the exact gap `stocktrader-setup` exists to close. It turns the Stock Trader architecture into a repeatable, team-friendly deployment — starting with Azure + AKS — so you can spend time learning the system (or extending it), not babysitting infrastructure.
+That is the gap `stocktrader-setup` is meant to close. It turns the Stock Trader architecture into a repeatable, team-friendly deployment on Azure AKS, so you can spend your time learning the system (or extending it) instead of babysitting infrastructure.
 
-By the end of this post, you’ll know what the repo sets up and how to get to a working URL in minutes.
+By the end of this post, you will know what the repo sets up and how to get a working URL in minutes.
 
-Who this is for: anyone who wants to run Stock Trader on Azure without hand-assembling cloud resources.
-
-If you’re evaluating the architecture, contributing a service, or setting up a demo environment, this repo is your starting point.
+Who this is for: anyone who wants to run Stock Trader on Azure without assembling cloud resources by hand. If you are evaluating the architecture, contributing a service, or setting up a demo environment, this repo is a good starting point.
 
 ## Quick context: what is Stock Trader?
 
-Stock Trader is a cloud-native sample made of multiple containerized microservices designed to run on Kubernetes. It was created at IBM and is now primarily maintained by Kyndryl (by the folks who originally built it).
+Stock Trader is a cloud-native sample made of multiple containerized microservices designed to run on Kubernetes. It was created at IBM and is now primarily maintained by Kyndryl (by many of the same folks who built it originally).
 
-If you want an “off-the-shelf but realistic” playground for cloud-native patterns — service-to-service calls, state, optional integrations, and real deployment concerns — this is the one.
+If you want an “off-the-shelf but realistic” playground for cloud-native patterns like service-to-service calls, state, optional integrations, and real deployment concerns, Stock Trader is a great choice.
 
-## Why this repo exists: “operators deploy apps”, not platforms
+## Why this repo exists: operators deploy apps, not platforms
 
-Stock Trader has an umbrella operator that can install and configure the microservices — but it does **not** provision the prerequisite platform services (databases, messaging, etc.). It expects you to bring those, then provide connection details.
+Stock Trader has an umbrella operator that can install and configure the microservices. What it does not do is provision the prerequisite platform services (databases, messaging, and so on). Those are expected to exist already, with connection details provided.
 
-So `stocktrader-setup` takes a strong stance:
+That is why `stocktrader-setup` takes a straightforward approach:
 
-> First build the platform layer. Then wire Stock Trader on top. Repeatably.
+> Build the platform layer first. Then install Stock Trader on top. Do it in a way you can repeat.
 
-## Reading the architecture diagram like a story (not a wiring schematic)
+## Reading the architecture diagram like a story
 
-This architecture is easiest to understand as two worlds:
+This diagram is easiest to understand in two parts:
 
 ![Stock Trader on Azure AKS](https://raw.githubusercontent.com/IBMStockTrader/stocktrader-setup/main/azure/public/diagram.png)
 
-### 1) What runs in AKS (the “trading floor”)
+### 1) What runs in AKS
 
-This is the Kubernetes side: services like Trader, Broker, Portfolio, Trade History, Stock Quote, Account/Cash Account, plus supporting pieces like messaging/notifications.
+This is the Kubernetes side: services like Trader, Broker, Portfolio, Trade History, Stock Quote, Account/Cash Account, plus supporting pieces like messaging and notifications.
 
-Traffic comes in from the UI (browser/mobile), and a Looper microservice can be enabled to simulate activity and test the system under load.
+Traffic comes in through the UI (browser or mobile). There is also a Looper microservice that can be enabled to generate activity for demos and testing.
 
-### 2) What Azure provides (the platform backbone)
+### 2) What Azure provides
 
-This is the managed layer: data services, cache, secrets/identity, networking, and optional integrations (eventing, functions, alternate data stores, etc.).
+This is the managed layer underneath the cluster: data services, cache, secrets and identity, networking, and optional integrations such as eventing or serverless components.
 
-The punchline: Stock Trader is built to plug into hyperscaler primitives. `stocktrader-setup` makes provisioning those primitives on Azure predictable.
+Stock Trader is designed to plug into these kinds of cloud primitives. `stocktrader-setup` is what makes provisioning the Azure side predictable.
 
-## The 60-second path: a “boring” workflow that actually works
+## A quick start flow that actually works
 
-TL;DR: authenticate → precheck → init/plan/apply → verify → get URL.
+The repo keeps the happy path simple:
 
 ```bash
 # 1) Auth + sanity
@@ -65,71 +63,59 @@ make postcheck
 make app-url
 ```
 
-That last step is the difference between a demo and a deployment mindset:
+A few small helpers make a big difference here:
 
-- `precheck.sh` is your bouncer: it catches missing tools, misconfig, and “this name already exists” problems before you waste time provisioning.  
-- `make postcheck` is the real MVP: it validates what you normally discover the hard way (cluster connectivity, app readiness, key dependencies reachable, routing behaving).  
-- `make app-url` removes the “ok but where is it exposed?” guessing game.
+- `precheck.sh` catches missing tools, misconfig, and name collisions early.  
+- `make postcheck` validates what usually fails after “apply succeeded,” like cluster access, app readiness, and dependency connectivity.  
+- `make app-url` prints the endpoint so you are not hunting for where the app is exposed.
 
 ## What stocktrader-setup provisions on Azure (in human terms)
 
-At a high level, the Azure implementation creates a production-leaning baseline for running Stock Trader on AKS — not a giant everything-and-the-kitchen-sink build. Think of it as a baseline on Azure (AKS + Postgres + Redis + Key Vault) that you can rely on and extend.
+The Azure implementation creates a production-leaning baseline for running Stock Trader on AKS. It is not meant to deploy every optional integration shown in the diagram. Think of it as a reliable starting point you can extend.
 
-Think of it as:
+In practice, it sets up a baseline on Azure built around AKS plus core dependencies such as Postgres, Redis, and Key Vault.
 
-- **AKS cluster + networking** (the foundation)  
-- **Managed data services** (so you’re not hand-rolling stateful infra)  
-- **Secrets/identity wiring** (so credentials aren’t scattered across YAML files)  
-- **Bootstrap + app install** (so Stock Trader is actually deployed, not “ready for you to deploy”)
+At a high level, you can think of it as:
 
-One important note: the diagram shows the broader ecosystem Stock Trader can integrate with (Cosmos/SQL/Eventing/etc.). This repo focuses on the baseline you need to get a reliable deployment up and running on Azure.
+- **AKS cluster and networking**, which everything runs on  
+- **Managed data services**, so you are not running stateful infrastructure by hand  
+- **Secrets and identity wiring**, so credentials are not scattered across YAML files  
+- **Bootstrap and app install**, so Stock Trader is deployed as part of the flow
 
-The repo is also structured to grow into other clouds over time: Azure is the complete implementation today, with room for more providers later.
+One important note: the diagram shows the broader ecosystem Stock Trader can integrate with (Cosmos, SQL Server, eventing, and more). This repo focuses on the baseline needed to deploy Stock Trader reliably on Azure and reach a working endpoint.
 
-## The “opinionated” parts that save you hours
+The repo is also structured to grow into other clouds over time. Azure is the complete implementation today, with room for more providers later.
 
-### 1) Fast failure beats slow debugging
+## The choices that save you time
 
-A lot of Terraform repos stop at “apply succeeded.”
+### 1) Catch problems early
 
-This one leans into prechecks + post-deploy verification, because in Kubernetes land, the painful failures are usually after infrastructure is technically created.
+A lot of Terraform repos stop at “apply succeeded.” This one leans into prechecks and post-deploy verification because Kubernetes problems often show up after infrastructure is technically created.
 
-### 2) Istio is supported — but it’s not a trap
+### 2) Istio support without forcing it
 
-Service mesh is where demos go to die:
+Service mesh can add value, but it can also introduce friction. The setup supports running with or without Istio and still aims to give you a clear, usable application URL either way.
 
-- sidecars not injected  
-- wrong labels / wrong revision  
-- gateways exist but routing doesn’t  
+### 3) Collaboration that does not fall apart
 
-The setup supports running **with or without** the mesh and gives you a clear “this is your URL” outcome either way.
+If more than one person touches an environment, remote state matters. The repo recommends a shared backend so you avoid the common failure modes: two laptops applying changes, state files scattered across machines, and drift nobody can explain.
 
-### 3) Team-ready habits (so it doesn’t collapse after day 1)
+## Where this fits in the larger Stock Trader workflow
 
-If more than one person will touch the environment, remote state is the difference between collaboration and chaos.
+Stock Trader is most valuable when you can iterate quickly. Make a change, deploy it, validate, and repeat. That is how you learn microservices patterns for real.
 
-The repo recommends a shared backend so you don’t end up with two laptops applying changes, state files living in random folders, and drift nobody can explain.
+`stocktrader-setup` gives you the stable environment needed to do that on Azure: cluster, wiring, prerequisites, and a workflow you can re-run with confidence.
 
-## Where this fits in the bigger Stock Trader lifecycle
+## Closing
 
-Stock Trader is most valuable when you can iterate:
+Microservices demos are easy to watch and hard to recreate.
 
-> change code → build/push → deploy → validate → repeat
+`stocktrader-setup` makes the architecture deployable in a repeatable, verifiable way. It helps you get to the part that actually matters: understanding the system, extending services, testing integrations, and shipping changes.
 
-That’s how you learn microservices patterns for real — not by staring at diagrams.
-
-`stocktrader-setup` is what makes the environment stable enough to support that loop on Azure: cluster, wiring, prerequisites, and a workflow you can re-run without crossing your fingers.
-
-## Closing: a setup repo that makes “try the sample” mean something
-
-A microservices demo is easy to watch and painfully hard to recreate.
-
-`stocktrader-setup` makes the diagram deployable — in a way that’s repeatable, verifiable, and shaped for real teams — so you can focus on what matters: understanding the system, extending services, testing integrations, and shipping changes.
-
-If you want to try it now, start here: run the Quick Start in the setup repo, then use `make app-url` to get your first working endpoint.
+If you want to try it, start with the Quick Start in the setup repo and use `make app-url` to get your first working endpoint.
 
 ## References
 
 - Terraform setup: <https://github.com/IBMStockTrader/stocktrader-setup>  
 - Application code: <https://github.com/IBMStockTrader>  
-- Azure-specific docs and architecture: `azure/README.md` and `azure/ARCHITECTURE.md` in the setup repo.
+- Azure docs and architecture: `azure/README.md` and `azure/ARCHITECTURE.md` in the setup repo.
