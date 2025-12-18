@@ -1,10 +1,10 @@
-# From Diagram to Deploy: Stock Trader on AKS with Terraform
+# Cloud-native deployment made easy with Terraform (or OpenTofu)
 
-*The setup repo that makes the sample reproducible*
+*Running Stock Trader on Azure AKS without assembling everything by hand*
 
 Microservices demos are fun until you try to recreate them.
 
-At that point you are not really “running the sample.” You are setting up Kubernetes, networking, databases, secrets, ingress, DNS, and enough security to make it feel real. Then you hit the classic problem: Terraform completes, and the app still does not load.
+At that point you are not really "running the sample." You are setting up Kubernetes, networking, databases, secrets, ingress, DNS, and enough security to make it feel real. Then you hit the classic problem: Terraform completes, and the app still does not load.
 
 That is where `stocktrader-setup` helps. It turns the Stock Trader architecture into a repeatable deployment on Azure AKS, so you can spend your time learning the system (or extending it) instead of babysitting infrastructure.
 
@@ -16,7 +16,9 @@ If you want to run Stock Trader on Azure without assembling cloud resources by h
 
 Stock Trader is a cloud-native sample made of multiple containerized microservices designed to run on Kubernetes. It was created at IBM and is now primarily maintained by Kyndryl.
 
-If you want an “off-the-shelf but realistic” playground for cloud-native patterns like service-to-service calls, state, optional integrations, and real deployment concerns, Stock Trader is a great choice.
+A nice part is that Stock Trader is not tied to one vendor. It has been run across major Kubernetes platforms and hyperscalers. This post focuses on Azure, because the setup repo has a solid AKS-based quick start.
+
+If you want an "off-the-shelf but realistic" playground for cloud-native patterns like service-to-service calls, state, optional integrations, and real deployment concerns, Stock Trader is a great choice.
 
 ## Why this repo exists: operators deploy apps, not platforms
 
@@ -66,8 +68,10 @@ make app-url
 A few small helpers make a big difference:
 
 - `precheck.sh` catches missing tools, misconfig, and name collisions early.  
-- `make postcheck` validates what often breaks after “apply succeeded,” like cluster access, app readiness, and dependency connectivity.  
+- `make postcheck` validates what often breaks after "apply succeeded," like cluster access, app readiness, and dependency connectivity.  
 - `make app-url` prints the endpoint so you are not hunting for where the app is exposed.
+
+Tooling note: the repo uses Terraform commands, but the configuration is also a good fit for teams that prefer OpenTofu (a community-led Terraform-compatible tool). If your org standardizes on OpenTofu, you can usually swap it in with minimal workflow changes.
 
 ## What stocktrader-setup provisions on Azure
 
@@ -75,7 +79,7 @@ The Azure implementation creates a production-leaning baseline for running Stock
 
 It sets up AKS plus core dependencies such as Postgres, Redis, and Key Vault.
 
-What you get, in plain terms:
+What you get:
 
 - **AKS cluster and networking**, which everything runs on  
 - **Managed data services**, so you are not running stateful infrastructure by hand  
@@ -90,7 +94,7 @@ The repo is also structured to grow into other clouds over time. Azure is the co
 
 ### 1) Catch problems early
 
-A lot of Terraform repos stop at “apply succeeded.” This one leans into prechecks and post-deploy verification because Kubernetes problems often show up after infrastructure is technically created.
+A lot of Terraform repos stop at "apply succeeded." This one leans into prechecks and post-deploy verification because Kubernetes problems often show up after infrastructure is technically created.
 
 ### 2) Istio support without forcing it
 
@@ -116,6 +120,6 @@ If you want to try it, start with the Quick Start in the setup repo and use `mak
 
 ## References
 
-- Terraform setup: <https://github.com/IBMStockTrader/stocktrader-setup>  
+- Terraform/OpenTofu setup: <https://github.com/IBMStockTrader/stocktrader-setup>  
 - Application code: <https://github.com/IBMStockTrader>  
-- Azure docs and architecture: `azure/README.md` and `azure/ARCHITECTURE.md` in the setup repo.
+- Azure docs and architecture: `azure/README.md` and `azure/ARCHITECTURE.md` in the setup repo
